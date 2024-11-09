@@ -6,39 +6,46 @@ using namespace Eigen;
 void AstarPathFinder::initGridMap(double _resolution, Vector3d global_xyz_l,
                                   Vector3d global_xyz_u, int max_x_id,
                                   int max_y_id, int max_z_id) {
-  gl_xl = global_xyz_l(0);
-  gl_yl = global_xyz_l(1);
-  gl_zl = global_xyz_l(2);
+  // 设置地图的下边界坐标
+  gl_xl = global_xyz_l(0);  // 地图x方向下边界
+  gl_yl = global_xyz_l(1);  // 地图y方向下边界
+  gl_zl = global_xyz_l(2);  // 地图z方向下边界
 
-  gl_xu = global_xyz_u(0);
-  gl_yu = global_xyz_u(1);
-  gl_zu = global_xyz_u(2);
+  // 设置地图的上边界坐标
+  gl_xu = global_xyz_u(0);  // 地图x方向上边界
+  gl_yu = global_xyz_u(1);  // 地图y方向上边界
+  gl_zu = global_xyz_u(2);  // 地图z方向上边界
 
-  GLX_SIZE = max_x_id;
-  GLY_SIZE = max_y_id;
-  GLZ_SIZE = max_z_id;
-  GLYZ_SIZE = GLY_SIZE * GLZ_SIZE;
-  GLXYZ_SIZE = GLX_SIZE * GLYZ_SIZE;
+  // 设置地图的尺寸
+  GLX_SIZE = max_x_id;      // x方向的最大栅格索引
+  GLY_SIZE = max_y_id;      // y方向的最大栅格索引
+  GLZ_SIZE = max_z_id;      // z方向的最大栅格索引
+  GLYZ_SIZE = GLY_SIZE * GLZ_SIZE;       // y-z平面的大小
+  GLXYZ_SIZE = GLX_SIZE * GLYZ_SIZE;     // x-y-z立体网格的总大小
 
-  resolution = _resolution;
-  inv_resolution = 1.0 / _resolution;
+  // 设置栅格地图的分辨率及其倒数
+  resolution = _resolution;            // 栅格地图的分辨率
+  inv_resolution = 1.0 / _resolution;  // 分辨率的倒数，用于坐标到索引的转换
 
-  data = new uint8_t[GLXYZ_SIZE];
-  memset(data, 0, GLXYZ_SIZE * sizeof(uint8_t));
+  // 初始化栅格地图的障碍物数据
+  data = new uint8_t[GLXYZ_SIZE];      // 为障碍物数据分配内存空间
+  memset(data, 0, GLXYZ_SIZE * sizeof(uint8_t)); // 将障碍物数据初始化为0，表示没有障碍物
 
-  GridNodeMap = new GridNodePtr **[GLX_SIZE];
+  // 初始化三维的栅格节点地图
+  GridNodeMap = new GridNodePtr **[GLX_SIZE];  // 为x方向分配空间
   for (int i = 0; i < GLX_SIZE; i++) {
-    GridNodeMap[i] = new GridNodePtr *[GLY_SIZE];
+    GridNodeMap[i] = new GridNodePtr *[GLY_SIZE];  // 为y方向分配空间
     for (int j = 0; j < GLY_SIZE; j++) {
-      GridNodeMap[i][j] = new GridNodePtr[GLZ_SIZE];
+      GridNodeMap[i][j] = new GridNodePtr[GLZ_SIZE];  // 为z方向分配空间
       for (int k = 0; k < GLZ_SIZE; k++) {
-        Vector3i tmpIdx(i, j, k);
-        Vector3d pos = gridIndex2coord(tmpIdx);
-        GridNodeMap[i][j][k] = new GridNode(tmpIdx, pos);
+        Vector3i tmpIdx(i, j, k);        // 当前节点的索引
+        Vector3d pos = gridIndex2coord(tmpIdx); // 将索引转换为实际坐标
+        GridNodeMap[i][j][k] = new GridNode(tmpIdx, pos); // 创建一个新的GridNode节点
       }
     }
   }
 }
+
 
 void AstarPathFinder::resetGrid(GridNodePtr ptr) {
   ptr->id = 0;
@@ -365,7 +372,7 @@ vector<Vector3d> AstarPathFinder::pathSimplify(const vector<Vector3d> &path,
     int flag = 0;                             //标记距离最大的点的下标
 	  double disSquare = 0;
 
-    for (int i = 1; i< path.size() - 1; i++) {
+    for (size_t i = 1; i< path.size() - 1; i++) {
       double temp = disP2L(first, last, path[i]);
       if (temp > disSquare) {                    //记录最大距离及编号
         disSquare = temp;

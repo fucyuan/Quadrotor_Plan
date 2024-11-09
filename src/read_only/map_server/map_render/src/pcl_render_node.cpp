@@ -83,38 +83,52 @@ vector<float> _pointRadiusSquaredDistance;
 pcl::PointCloud<pcl::PointXYZ> cloud_input;
 void rcvGlobalPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map)
 {
+    // 如果全局地图已经存在，则直接返回，不进行处理
     if (has_global_map)
         return;
 
-    //transform map to point cloud format
+    // 将ROS的点云消息格式转换为PCL点云格式
     pcl::fromROSMsg(pointcloud_map, cloud_input);
-    has_global_map = has_global_ground && true;
-    // for visualize only
-    pcl::PointCloud<pcl::PointXYZ> cloud_vis;
-    sensor_msgs::PointCloud2 map_vis;
-    pcl::PointXYZ pt;
-    
-    if( (int)cloud_input.points.size() == 0 ) return;
+    has_global_map = has_global_ground && true;  // 标记全局地图已存在
 
+    // 仅用于可视化的点云
+    pcl::PointCloud<pcl::PointXYZ> cloud_vis;  // 定义用于可视化的PCL点云
+    sensor_msgs::PointCloud2 map_vis;          // 定义用于发布的ROS点云消息
+    pcl::PointXYZ pt;                          // 定义一个点变量
+
+    // 如果转换后的点云为空，则直接返回
+    if ((int)cloud_input.points.size() == 0) return;
+
+    // 遍历点云中的每个点
     for (int idx = 0; idx < (int)cloud_input.points.size(); idx++)
     {    
-        pt = cloud_input.points[idx];
+        pt = cloud_input.points[idx];  // 获取当前点的坐标
+
+        // 将点的坐标转换到栅格索引，并再转换回相应的栅格中心坐标
         Vector3d cor_round = gridIndex2coord(coord2gridIndex(Vector3d(pt.x, pt.y, pt.z)));
+
+        // 将点的坐标设置为对应栅格中心的坐标，进行位置的取整
         pt.x = cor_round(0);
         pt.y = cor_round(1);
         pt.z = cor_round(2);
+
+        // 将处理后的点加入可视化点云
         cloud_vis.points.push_back(pt);
     }
 
-    cloud_vis.width    = cloud_vis.points.size();
-    cloud_vis.height   = 1;
-    cloud_vis.is_dense = true;
+    // 设置可视化点云的属性
+    cloud_vis.width    = cloud_vis.points.size();  // 点云的宽度，即点的数量
+    cloud_vis.height   = 1;                        // 点云的高度，设置为1表示无序点云
+    cloud_vis.is_dense = true;                     // 设置点云为稠密格式
 
+    // 将PCL点云格式转换为ROS消息格式
     pcl::toROSMsg(cloud_vis, map_vis);
 
+    // 设置消息的坐标系并发布可视化的全局地图
     map_vis.header.frame_id = "world";
     global_map_vis_pub.publish(map_vis);
 }
+
 
 void rcvGlobalGroundPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map)
 {
@@ -173,56 +187,80 @@ void rcvGlobalGroundPointCloudCallBack(const sensor_msgs::PointCloud2 &pointclou
 
 void renderSensedPoints(const ros::TimerEvent &event)
 {
+    // 如果全局地图或里程计数据尚未准备好，则直接返回
     if (!has_global_map || !has_odom)
         return;
 
+    // 从里程计数据中获取四元数，表示当前的姿态
     Eigen::Quaterniond q;
     q.x() = _odom.pose.pose.orientation.x;
     q.y() = _odom.pose.pose.orientation.y;
     q.z() = _odom.pose.pose.orientation.z;
     q.w() = _odom.pose.pose.orientation.w;
 
+    // 将四元数转换为旋转矩阵
     Eigen::Matrix3d rot;
     rot = q;
+
+    // 获取旋转矩阵的第一列，表示飞行器的朝向（通常是yaw方向）
     Eigen::Vector3d yaw_vec = rot.col(0);
 
+    // 清空局部点云（_local_map），用于存储感知范围内的点
     _local_map.points.clear();
+
+    // 设置当前搜索点为飞行器的当前位置
     pcl::PointXYZ searchPoint(_odom.pose.pose.position.x, _odom.pose.pose.position.y, _odom.pose.pose.position.z);
+
+    // 清空搜索索引和距离的存储变量
     _pointIdxRadiusSearch.clear();
     _pointRadiusSquaredDistance.clear();
 
-    pcl::PointXYZ pt;
+    pcl::PointXYZ pt;  // 定义一个临时点变量
+
+    // 使用KD树在感知范围内搜索点云
     if (_kdtreeLocalMap.radiusSearch(searchPoint, sensing_horizon, _pointIdxRadiusSearch, _pointRadiusSquaredDistance) > 0)
     {
+        // 遍历搜索结果，获取感知范围内的所有点
         for (size_t i = 0; i < _pointIdxRadiusSearch.size(); ++i)
         {
             pt = _cloud_all_map.points[_pointIdxRadiusSearch[i]];
 
-            if ((fabs(pt.z - _odom.pose.pose.position.z) / (sensing_horizon)) > tan(M_PI / 12.0))
+            // 如果点在飞行器z轴的高度差过大，则忽略（设定倾斜角度的限制）
+            if ((fabs(pt.z - _odom.pose.pose.position.z) / sensing_horizon) > tan(M_PI / 12.0))
                 continue;
 
+            // 计算点相对于飞行器位置的向量
             Vector3d pt_vec(pt.x - _odom.pose.pose.position.x, pt.y - _odom.pose.pose.position.y, pt.z - _odom.pose.pose.position.z);
 
+            // 如果点在飞行器的背后，则忽略（只关注前方的点）
             if (pt_vec.dot(yaw_vec) < 0)
                 continue;
+
+            // 将符合条件的点加入局部地图点云
             _local_map.points.push_back(pt);
         }
     }
     else
     {
+        // 如果未找到任何点，则直接返回
         return;
     }
 
-    _local_map.width = _local_map.points.size();
-    _local_map.height = 1;
-    _local_map.is_dense = true;
+    // 设置局部点云的属性
+    _local_map.width = _local_map.points.size();  // 点云的宽度为点数
+    _local_map.height = 1;                        // 点云的高度设置为1，表示无序点云
+    _local_map.is_dense = true;                   // 设置点云为稠密格式
 
+    // 将PCL格式的点云转换为ROS消息格式
     pcl::toROSMsg(_local_map, _local_map_pcd);
+
+    // 设置消息的坐标系
     _local_map_pcd.header.frame_id = map_frame_name;
 
+    // 发布局部点云数据
     pub_cloud.publish(_local_map_pcd);
-
 }
+
 
 int main(int argc, char **argv)
 {

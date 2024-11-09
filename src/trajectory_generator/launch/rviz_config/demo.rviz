@@ -7,7 +7,7 @@ Panels:
         - /Global Options1
         - /Quadrotor1
         - /Map1
-        - /PointCloud21
+        - /Map1/global_map1
       Splitter Ratio: 0.6090225577354431
     Tree Height: 447
   - Class: rviz/Selection
@@ -139,7 +139,7 @@ Visualization Manager:
           Size (Pixels): 3
           Size (m): 0.10000000149011612
           Style: Flat Squares
-          Topic: /pcl_render_node/global_map_vis
+          Topic: /random_complex/global_map
           Unreliable: false
           Use Fixed Frame: true
           Use rainbow: true
@@ -147,8 +147,8 @@ Visualization Manager:
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
-            Max Value: 4.201000213623047
-            Min Value: 1.625999927520752
+            Max Value: 4.526000022888184
+            Min Value: 1.9259999990463257
             Value: true
           Axis: Z
           Channel Name: intensity
@@ -220,7 +220,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 27.23133659362793
+      Distance: 45.04111099243164
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -236,9 +236,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9847965836524963
+      Pitch: 0.9397966861724854
       Target Frame: <Fixed Frame>
-      Yaw: 3.399837017059326
+      Yaw: 3.454836845397949
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688
