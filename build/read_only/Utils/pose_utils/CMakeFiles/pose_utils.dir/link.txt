@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -g -O0  -shared -Wl,-soname,libpose_utils.so -o /home/fcy/kaiyuan/Quadrotor_Plan/devel/lib/libpose_utils.so CMakeFiles/pose_utils.dir/src/pose_utils.cpp.o 

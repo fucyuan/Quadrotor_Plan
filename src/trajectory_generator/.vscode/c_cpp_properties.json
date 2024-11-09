@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/teamo/Motion_plan/Project/src/devel/include/**",
+                "/opt/ros/melodic/include/**",
+                "/home/teamo/Motion_plan/Project/src/src/read_only/map_server/map_generator/include/**",
+                "/home/teamo/Motion_plan/Project/src/src/read_only/Utils/pose_utils/include/**",
+                "/home/teamo/Motion_plan/Project/src/src/read_only/Utils/quadrotor_msgs/include/**",
+                "/home/teamo/Motion_plan/Project/src/src/read_only/quadrotor_simulator/so3_control/include/**",
+                "/home/teamo/Motion_plan/Project/src/src/read_only/quadrotor_simulator/so3_quadrotor_simulator/include/**",
+                "/home/teamo/Motion_plan/Project/src/src/trajectory_generator/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

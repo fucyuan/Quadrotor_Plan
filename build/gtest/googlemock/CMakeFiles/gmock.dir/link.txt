@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -g -O0  -shared -Wl,-soname,libgmock.so -o ../lib/libgmock.so CMakeFiles/gmock.dir/src/gmock-all.cc.o  -Wl,-rpath,/home/fcy/kaiyuan/Quadrotor_Plan/build/gtest/lib ../lib/libgtest.so -lpthread 

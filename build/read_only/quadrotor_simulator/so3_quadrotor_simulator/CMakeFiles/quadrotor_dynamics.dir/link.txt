@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -g -O0  -shared -Wl,-soname,libquadrotor_dynamics.so -o /home/fcy/kaiyuan/Quadrotor_Plan/devel/lib/libquadrotor_dynamics.so CMakeFiles/quadrotor_dynamics.dir/src/dynamics/Quadrotor.cpp.o 

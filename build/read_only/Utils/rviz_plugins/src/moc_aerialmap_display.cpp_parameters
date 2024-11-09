@@ -1,0 +1,7 @@
+-DROS_BUILD_SHARED_LIBS=1
+-DROS_BUILD_SHARED_LIBS=1
+-DROS_PACKAGE_NAME="rviz_plugins"
+-DROSCONSOLE_BACKEND_LOG4CXX
+-o
+/home/fcy/kaiyuan/Quadrotor_Plan/build/read_only/Utils/rviz_plugins/src/moc_aerialmap_display.cpp
+/home/fcy/kaiyuan/Quadrotor_Plan/src/read_only/Utils/rviz_plugins/src/aerialmap_display.h

@@ -1,0 +1,2 @@
+read_only/Utils/cmake_utils:read_only/Utils/multi_map_server:read_only/Utils/odom_visualization:read_only/Utils/pose_utils:read_only/Utils/quadrotor_msgs:read_only/Utils/rviz_plugins:read_only/Utils/uav_utils:read_only/Utils/waypoint_generator:read_only/map_server/map_generator:read_only/map_server/map_render:read_only/so3_control:read_only/so3_quadrotor_simulator:read_only/traj_server:trajectory_generator
+-DCATKIN_DEVEL_PREFIX=/home/fcy/kaiyuan/Quadrotor_Plan/devel -DCMAKE_INSTALL_PREFIX=/home/fcy/kaiyuan/Quadrotor_Plan/install -G Unix Makefiles
