@@ -345,55 +345,96 @@ vector<Vector3d> AstarPathFinder::getPath() {
 }
 
 
-// 计算一点到一条直线（已知两点）的距离
-//first和last分别为线的两端，third是第三点
-double AstarPathFinder::disP2L(const Vector3d first, const Vector3d last, const Vector3d third) 
-																//CMyPoint是点的类型，可以换成CPoint
-{
-  Vector3d nu = (third - first).cross(third - last);
-  Vector3d de = first - last;
-	double disSuqare = nu.norm()/de.norm();
-	return disSuqare;
+// // 计算一点到一条直线（已知两点）的距离
+// //first和last分别为线的两端，third是第三点
+// double AstarPathFinder::disP2L(const Vector3d first, const Vector3d last, const Vector3d third) 
+// 																//CMyPoint是点的类型，可以换成CPoint
+// {
+//   Vector3d nu = (third - first).cross(third - last);
+//   Vector3d de = first - last;
+// 	double disSuqare = nu.norm()/de.norm();
+// 	return disSuqare;
+// }
+
+
+// vector<Vector3d> AstarPathFinder::pathSimplify(const vector<Vector3d> &path,
+//                                                double path_resolution) {
+//   vector<Vector3d> subPath;
+
+//   if (path.size() <= 2)
+//   {                            // 如果轨迹中的点数小于2，则直接返回原来的轨迹
+//     subPath = path;
+//   }else
+//   {
+//     const Vector3d first = path[0];                 //定义首点
+// 	  const Vector3d last = path[path.size() - 1];    //定义尾点
+
+//     int flag = 0;                             //标记距离最大的点的下标
+// 	  double disSquare = 0;
+
+//     for (size_t i = 1; i< path.size() - 1; i++) {
+//       double temp = disP2L(first, last, path[i]);
+//       if (temp > disSquare) {                    //记录最大距离及编号
+//         disSquare = temp;
+//         flag = i;
+//       }
+//     }
+
+//     if (disSquare < path_resolution) {                        //判断值与阈值的关系,阈值自己设定
+//       subPath.push_back(first);                               //如果小于阈值，则保留首尾点
+//       subPath.push_back(last);              
+//                                                               //用于存储留下来的点,是最后的成果
+//     }
+//     else {                                                    //否则分成两段
+// 		vector<Vector3d> recResults1 = pathSimplify(vector<Vector3d>(path.begin(),path.begin()+flag), path_resolution);
+//     vector<Vector3d> recResults2 = pathSimplify(vector<Vector3d>(path.begin()+flag,path.end()), path_resolution);
+//     subPath.insert(subPath.end(),recResults1.begin(),recResults1.end()-1);
+//     subPath.insert(subPath.end(),recResults2.begin(),recResults2.end());
+// 	  }
+//   }
+//   // return subPath;
+//   return subPath;
+// }
+// 计算点到线段的距离（起点first和终点last定义的线段）
+double AstarPathFinder::disP2L(const Vector3d& first, const Vector3d& last, const Vector3d& point) {
+    Vector3d lineVec = last - first;
+    Vector3d pointVec = point - first;
+    double area = lineVec.cross(pointVec).norm();
+    return area / lineVec.norm();
 }
 
-
-vector<Vector3d> AstarPathFinder::pathSimplify(const vector<Vector3d> &path,
-                                               double path_resolution) {
-  vector<Vector3d> subPath;
-
-  if (path.size() <= 2)
-  {                            // 如果轨迹中的点数小于2，则直接返回原来的轨迹
-    subPath = path;
-  }else
-  {
-    const Vector3d first = path[0];                 //定义首点
-	  const Vector3d last = path[path.size() - 1];    //定义尾点
-
-    int flag = 0;                             //标记距离最大的点的下标
-	  double disSquare = 0;
-
-    for (size_t i = 1; i< path.size() - 1; i++) {
-      double temp = disP2L(first, last, path[i]);
-      if (temp > disSquare) {                    //记录最大距离及编号
-        disSquare = temp;
-        flag = i;
-      }
+// 使用RDP算法对路径进行简化
+vector<Vector3d> AstarPathFinder::pathSimplify(const vector<Vector3d>& path, double epsilon) {
+    // 如果路径点数少于3，则无需简化，直接返回
+    if (path.size() < 3) {
+        return path;
     }
 
-    if (disSquare < path_resolution) {                        //判断值与阈值的关系,阈值自己设定
-      subPath.push_back(first);                               //如果小于阈值，则保留首尾点
-      subPath.push_back(last);              
-                                                              //用于存储留下来的点,是最后的成果
+    // 找到距离起点和终点的直线最远的点
+    int maxIndex = 0;
+    double maxDist = 0.0;
+    for (size_t i = 1; i < path.size() - 1; ++i) {
+        double dist = disP2L(path[0], path.back(), path[i]);
+        if (dist > maxDist) {
+            maxDist = dist;
+            maxIndex = i;
+        }
     }
-    else {                                                    //否则分成两段
-		vector<Vector3d> recResults1 = pathSimplify(vector<Vector3d>(path.begin(),path.begin()+flag), path_resolution);
-    vector<Vector3d> recResults2 = pathSimplify(vector<Vector3d>(path.begin()+flag,path.end()), path_resolution);
-    subPath.insert(subPath.end(),recResults1.begin(),recResults1.end()-1);
-    subPath.insert(subPath.end(),recResults2.begin(),recResults2.end());
-	  }
-  }
-  // return subPath;
-  return subPath;
+
+    // 如果最大距离小于阈值，则只保留首尾点
+    if (maxDist < epsilon) {
+        return { path[0], path.back() };
+    }
+
+    // 递归简化左右两段路径
+    vector<Vector3d> leftPath = pathSimplify({ path.begin(), path.begin() + maxIndex + 1 }, epsilon);
+    vector<Vector3d> rightPath = pathSimplify({ path.begin() + maxIndex, path.end() }, epsilon);
+
+    // 合并结果，避免重复包含中间点
+    leftPath.pop_back();  // 移除左侧路径的最后一个点，防止重复
+    leftPath.insert(leftPath.end(), rightPath.begin(), rightPath.end());
+
+    return leftPath;
 }
 
 Vector3d AstarPathFinder::getPosPoly(MatrixXd polyCoeff, int k, double t) {

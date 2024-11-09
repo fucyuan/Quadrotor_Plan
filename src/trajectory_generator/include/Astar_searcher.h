@@ -56,7 +56,8 @@ class AstarPathFinder
 		Eigen::Vector3d getPosPoly( Eigen::MatrixXd polyCoeff, int k, double t );
 		int safeCheck( Eigen::MatrixXd polyCoeff, Eigen::VectorXd time);
 		// 计算一点到一条直线（已知两点）的距离
-		double disP2L(const Eigen::Vector3d first, const Eigen::Vector3d last, const Eigen::Vector3d third); //first和last分别为线的两端，third是第三点
+		// double disP2L(const Eigen::Vector3d first, const Eigen::Vector3d last, const Eigen::Vector3d third); //first和last分别为线的两端，third是第三点
+		double disP2L(const Eigen::Vector3d& first, const Eigen::Vector3d& last, const Eigen::Vector3d& point); //first和last分别为线的两端，point是需要求距离的点
 
 };
 
