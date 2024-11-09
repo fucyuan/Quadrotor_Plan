@@ -352,7 +352,8 @@ public:
 
                     }
 
-                    _cmd.yaw = atan2(_cmd.velocity.y, _cmd.velocity.x);
+                    // _cmd.yaw = atan2(_cmd.velocity.y, _cmd.velocity.x);
+                     _cmd.yaw=0;
 
                     tf::Quaternion quat(_odom.pose.pose.orientation.x, _odom.pose.pose.orientation.y, _odom.pose.pose.orientation.z, _odom.pose.pose.orientation.w);
                     tf::Matrix3x3 rotM(quat);
