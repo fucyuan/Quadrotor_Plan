@@ -57,7 +57,7 @@ Visualization Manager:
           Axes Radius: 0.10000000149011612
           Class: rviz/Pose
           Color: 85; 255; 255
-          Enabled: true
+          Enabled: false
           Head Length: 0.30000001192092896
           Head Radius: 0.10000000149011612
           Name: Pose
@@ -67,7 +67,7 @@ Visualization Manager:
           Shape: Axes
           Topic: /odom_visualization/pose
           Unreliable: false
-          Value: true
+          Value: false
         - Class: rviz/Marker
           Enabled: false
           Marker Topic: /traj_server/desired_acceleration
@@ -85,13 +85,13 @@ Visualization Manager:
           Queue Size: 50
           Value: false
         - Class: rviz/Marker
-          Enabled: false
+          Enabled: true
           Marker Topic: /odom_visualization/robot
           Name: Quadrotor
           Namespaces:
-            {}
+            mesh: true
           Queue Size: 100
-          Value: false
+          Value: true
       Enabled: true
       Name: Quadrotor
     - Class: rviz/Group
@@ -147,8 +147,8 @@ Visualization Manager:
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
-            Max Value: 3.4260001182556152
-            Min Value: 0.8259999752044678
+            Max Value: 4.201000213623047
+            Min Value: 1.625999927520752
             Value: true
           Axis: Z
           Channel Name: intensity
@@ -220,7 +220,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 30.581832885742188
+      Distance: 27.23133659362793
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -236,9 +236,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6447967290878296
+      Pitch: 0.9847965836524963
       Target Frame: <Fixed Frame>
-      Yaw: 1.7598323822021484
+      Yaw: 3.399837017059326
     Saved:
       - Class: rviz/Orbit
         Distance: 79.24484252929688
