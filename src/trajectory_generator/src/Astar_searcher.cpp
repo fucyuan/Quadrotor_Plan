@@ -66,10 +66,16 @@ void AstarPathFinder::setObs(const double coord_x, const double coord_y,
   if (coord_x < gl_xl || coord_y < gl_yl || coord_z < gl_zl ||
       coord_x >= gl_xu || coord_y >= gl_yu || coord_z >= gl_zu)
     return;
+    
 
   int idx_x = static_cast<int>((coord_x - gl_xl) * inv_resolution);
   int idx_y = static_cast<int>((coord_y - gl_yl) * inv_resolution);
   int idx_z = static_cast<int>((coord_z - gl_zl) * inv_resolution);
+  if (idx_x + 1 >= GLX_SIZE || idx_y + 1 >= GLY_SIZE || idx_z >= GLZ_SIZE || idx_x < -1 || idx_y < -1 || idx_z < 0) 
+  {
+    std::cerr << "Error: Index out of bounds in setObs function" << std::endl;
+    return;
+  }
 
   if (idx_x == 0 || idx_y == 0 || idx_z == GLZ_SIZE || idx_x == GLX_SIZE ||
       idx_y == GLY_SIZE)

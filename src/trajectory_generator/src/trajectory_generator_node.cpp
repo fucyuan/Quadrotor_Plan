@@ -313,7 +313,14 @@ void trajOptimization(Eigen::MatrixXd path) {
    * STEP 3.1:  时间分配
    *
    * **/
-  _polyTime = timeAllocation(path);
+  // _polyTime = timeAllocation(path);
+  try {
+    _polyTime = timeAllocation(path);
+} catch (const std::runtime_error& e) {
+    std::cerr << "Error in timeAllocation: " << e.what() << std::endl;
+    return;
+}
+
 
   /**
    *
@@ -402,7 +409,14 @@ void trajOptimization(Eigen::MatrixXd path) {
     repath = tmp;
 
     // 重新分配时间和生成多项式轨迹
-    _polyTime = timeAllocation(repath);
+    // _polyTime = timeAllocation(repath);
+      try {
+      _polyTime = timeAllocation(repath);
+  } catch (const std::runtime_error& e) {
+      std::cerr << "Error in timeAllocation: " << e.what() << std::endl;
+      return;
+  }
+
     _polyCoeff = _trajGene->PolyQPGeneration(_dev_order, repath, vel, acc, _polyTime, slover);
 
     // 检查是否还有不安全段
@@ -495,27 +509,35 @@ void trajPublish(MatrixXd polyCoeff, VectorXd time) {
 //   return time;
 // }
 VectorXd timeAllocation(const MatrixXd Path) {
-    VectorXd time(Path.rows() - 1);  // 为每个路径段分配时间
+    // 检查路径点数是否足够
+    if (Path.rows() < 2) {
+        throw std::runtime_error("Path has insufficient points for time allocation.");
+    }
+
+    // 分配时间向量，大小为路径段数
+    VectorXd time(Path.rows() - 1);
 
     // 计算加速和减速段的总时间以及加速段的距离
-    double t_scope = 2.0 * _Vel / _Acc;  // 加速时间
-    double distance_acc = 0.5 * _Acc * t_scope * t_scope;  // 加速段和减速段总距离
+    double t_scope = 2.0 * _Vel / _Acc;  // 加速和减速所需时间
+    double distance_acc = 0.5 * _Acc * t_scope * t_scope;  // 加速和减速段总距离
 
     for (int k = 0; k < Path.rows() - 1; ++k) {
-        Vector3d delta = Path.row(k + 1) - Path.row(k);  // 计算路径段的位移向量
-        double d = delta.norm();  // 计算路径段长度
+        // 计算当前路径段的位移向量和长度
+        Vector3d delta = Path.row(k + 1) - Path.row(k);
+        double d = delta.norm();
 
         if (d <= distance_acc) {
-            // 如果路径段短于加速段距离，则仅使用加速段或减速段
-            time(k) = 2.0 * std::sqrt(d / _Acc);  // 使用双倍加速时间
+            // 如果路径段短于加速段距离，则仅使用加速/减速段
+            time(k) = 2.0 * std::sqrt(d / _Acc);  // 加速和减速时间
         } else {
-            // 对于较长路径段，包含完整的加速、匀速和减速过程
+            // 较长路径段，包含完整的加速、匀速和减速过程
             time(k) = t_scope + (d - distance_acc) / _Vel;  // 总时间 = 加速时间 + 匀速时间
         }
     }
 
     return time;
 }
+
 
 
 void visTrajectory(MatrixXd polyCoeff, VectorXd time) {
