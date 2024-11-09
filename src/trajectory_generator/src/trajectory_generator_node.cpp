@@ -155,27 +155,44 @@ void execCallback(const ros::TimerEvent &e) {
     break;
   }
 
-  case EXEC_TRAJ: {                                                   // 如果当前状态为执行轨迹
+ case EXEC_TRAJ: {  // 如果当前状态为执行轨迹
+    // 获取当前的系统时间
     ros::Time time_now = ros::Time::now();
+
+    // 计算从轨迹开始时间到当前时间的间隔（当前轨迹执行的时间）
     double t_cur = (time_now - time_traj_start).toSec();
+
+    // 设置重规划的时间间隔为1秒（每隔1秒重新检查是否需要重规划）
     double t_replan = ros::Duration(1, 0).toSec();
+
+    // 确保t_cur不超过轨迹总时间（time_duration）
     t_cur = min(time_duration, t_cur);
 
+    // 检查当前轨迹是否接近结束，如果接近结束，则认为到达目标并更新状态为等待目标
     if (t_cur > time_duration - 1e-2) {
-      has_target = false;
-      changeState(WAIT_TARGET, "STATE");
-      return;
-    } else if ((target_pt - odom_pt).norm() < no_replan_thresh) {
-      return;
-    } else if ((start_pt - odom_pt).norm() < replan_thresh) {
-      return;
-    } else if (t_cur < t_replan) {
-      return;
-    } else {
-      changeState(REPLAN_TRAJ, "STATE");                              // 如果满足一定时间和距离阈值，则更新状态为重新规划轨迹
+        has_target = false;  // 取消目标
+        changeState(WAIT_TARGET, "STATE");  // 切换状态为等待目标
+        return;
+    }
+    // 检查是否接近目标点，如果距离小于阈值(no_replan_thresh)，则保持当前轨迹执行，不进行重规划
+    else if ((target_pt - odom_pt).norm() < no_replan_thresh) {
+        return;
+    }
+    // 检查是否远离起点，如果距离小于阈值(replan_thresh)，则保持当前轨迹执行，不进行重规划
+    else if ((start_pt - odom_pt).norm() < replan_thresh) {
+        return;
+    }
+    // 如果当前时间小于重规划时间间隔(t_replan)，则继续执行当前轨迹
+    else if (t_cur < t_replan) {
+        return;
+    }
+    // 如果满足以上条件，即时间和距离满足要求，则更新状态为重新规划轨迹
+    else {
+        changeState(REPLAN_TRAJ, "STATE");  // 切换状态为重新规划轨迹
     }
     break;
-  }
+}
+
   case REPLAN_TRAJ: {                                                 // 如果当前状态为重新规划轨迹
     ros::Time time_now = ros::Time::now();
     double t_cur = (time_now - time_traj_start).toSec();
@@ -398,56 +415,62 @@ void trajOptimization(Eigen::MatrixXd path) {
 }
 
 void trajPublish(MatrixXd polyCoeff, VectorXd time) {
+  // 如果多项式系数或时间为空，则警告并返回
   if (polyCoeff.size() == 0 || time.size() == 0) {
-    ROS_WARN("[trajectory_generator_waypoint] empty trajectory, nothing to "
-             "publish.");
+    ROS_WARN("[trajectory_generator_waypoint] empty trajectory, nothing to publish.");
     return;
   }
 
-  unsigned int poly_number;
+  unsigned int poly_number;  // 存储多项式阶数
 
-  static int count =
-      1; // The first trajectory_id must be greater than 0. zxzxzxzx
+  static int count = 1; // 计数器，表示轨迹ID，每个轨迹的ID必须大于0
 
+  // 定义轨迹消息对象
   quadrotor_msgs::PolynomialTrajectory traj_msg;
 
-  traj_msg.header.seq = count;
-  traj_msg.header.stamp = ros::Time::now();
-  traj_msg.header.frame_id = std::string("world");
-  traj_msg.trajectory_id = count;
-  traj_msg.action = quadrotor_msgs::PolynomialTrajectory::ACTION_ADD;
+  // 设置轨迹消息的头部信息
+  traj_msg.header.seq = count;                   // 设置序列号
+  traj_msg.header.stamp = ros::Time::now();      // 设置时间戳
+  traj_msg.header.frame_id = std::string("world"); // 设置坐标系
 
-  traj_msg.num_order = 2 * _dev_order - 1; // the order of polynomial
-  traj_msg.num_segment = time.size();
+  // 设置轨迹ID和动作类型
+  traj_msg.trajectory_id = count;                  // 轨迹ID
+  traj_msg.action = quadrotor_msgs::PolynomialTrajectory::ACTION_ADD; // 动作类型为“添加轨迹”
 
+  // 设置多项式的阶数（根据_dev_order计算）
+  traj_msg.num_order = 2 * _dev_order - 1;  // 多项式的最高阶
+  traj_msg.num_segment = time.size();       // 设置轨迹段数
+
+  // 计算初始和终止速度方向，确定yaw角
   Vector3d initialVel, finalVel;
-  initialVel = _trajGene->getVelPoly(_polyCoeff, 0, 0);
-  finalVel = _trajGene->getVelPoly(_polyCoeff, traj_msg.num_segment - 1,
-                                   _polyTime(traj_msg.num_segment - 1));
-  traj_msg.start_yaw = atan2(initialVel(1), initialVel(0));
-  traj_msg.final_yaw = atan2(finalVel(1), finalVel(0));
+  initialVel = _trajGene->getVelPoly(_polyCoeff, 0, 0);  // 初始段的速度
+  finalVel = _trajGene->getVelPoly(_polyCoeff, traj_msg.num_segment - 1, _polyTime(traj_msg.num_segment - 1));  // 最后段的速度
+  traj_msg.start_yaw = atan2(initialVel(1), initialVel(0));  // 初始yaw角度
+  traj_msg.final_yaw = atan2(finalVel(1), finalVel(0));      // 最终yaw角度
 
+  // 设置多项式的项数
   poly_number = traj_msg.num_order + 1;
-  // cout << "p_order:" << poly_number << endl;
-  // cout << "traj_msg.num_order:" << traj_msg.num_order << endl;
-  // cout << "traj_msg.num_segment:" << traj_msg.num_segment << endl;
+
+  // 遍历每个轨迹段并填充轨迹系数
   for (unsigned int i = 0; i < traj_msg.num_segment; i++) {
     for (unsigned int j = 0; j < poly_number; j++) {
-      traj_msg.coef_x.push_back(polyCoeff(i, j) * pow(time(i), j));
-      traj_msg.coef_y.push_back(polyCoeff(i, poly_number + j) *
-                                pow(time(i), j));
-      traj_msg.coef_z.push_back(polyCoeff(i, 2 * poly_number + j) *
-                                pow(time(i), j));
+      traj_msg.coef_x.push_back(polyCoeff(i, j) * pow(time(i), j));                // x方向的多项式系数
+      traj_msg.coef_y.push_back(polyCoeff(i, poly_number + j) * pow(time(i), j));  // y方向的多项式系数
+      traj_msg.coef_z.push_back(polyCoeff(i, 2 * poly_number + j) * pow(time(i), j)); // z方向的多项式系数
     }
-    traj_msg.time.push_back(time(i));
-    traj_msg.order.push_back(traj_msg.num_order);
+    traj_msg.time.push_back(time(i));                  // 设置该段的持续时间
+    traj_msg.order.push_back(traj_msg.num_order);      // 设置多项式的阶数
   }
-  traj_msg.mag_coeff = 1;
+  traj_msg.mag_coeff = 1;  // 设置多项式的系数
 
+  // 增加轨迹ID计数器，确保下一个轨迹消息的ID不同
   count++;
+
+  // 发布轨迹消息
   ROS_WARN("[traj..gen...node] traj_msg publish");
   _traj_pub.publish(traj_msg);
 }
+
 
 // VectorXd timeAllocation(MatrixXd Path) {
 //   VectorXd time(Path.rows() - 1);
