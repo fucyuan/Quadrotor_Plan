@@ -315,7 +315,7 @@ void trajOptimization(Eigen::MatrixXd path) {
   unsafe_segment = _astar_path_finder->safeCheck(_polyCoeff, _polyTime);
   unsafe_segment = -1;
   MatrixXd repath = path;
-  int count = 0;
+  // int count = 0;
   // while (unsafe_segment != -1) {
   //   std::cout << unsafe_segment << std::endl;
   //   /**
@@ -370,7 +370,7 @@ void trajOptimization(Eigen::MatrixXd path) {
     tmp.block(0, 0, unsafe_segment, 3) = repath.block(0, 0, unsafe_segment, 3);
 
     // 插入新的路径段（`grid_path`），不包含起点和终点，因为它们已在原路径中
-    for (int j = 0; j < grid_path.size(); ++j) {
+    for (size_t j = 0; j < grid_path.size(); ++j) {
         tmp.row(unsafe_segment + j) = grid_path[j];
     }
 
@@ -573,61 +573,60 @@ Vector3d getVel(double t_cur) {
 
 int main(int argc, char **argv) {
 
+  // 初始化ROS节点
   ros::init(argc, argv, "traj_node");
   ros::NodeHandle nh("~");
-  // 获取参数
-  nh.param("planning/vel", _Vel, 1.0);
-  nh.param("planning/acc", _Acc, 1.0);
-  nh.param("planning/dev_order", _dev_order, 3);
-  nh.param("planning/min_order", _min_order, 3);
-  nh.param("vis/vis_traj_width", _vis_traj_width, 0.15);
-  nh.param("map/resolution", _resolution, 0.2);
-  nh.param("map/x_size", _x_size, 50.0);
-  nh.param("map/y_size", _y_size, 50.0);
-  nh.param("map/z_size", _z_size, 5.0);
-  nh.param("path/resolution", _path_resolution, 0.05);
-  nh.param("replanning/thresh_replan", replan_thresh, -1.0);
-  nh.param("replanning/thresh_no_replan", no_replan_thresh, -1.0);
 
-  // 多项式系数个数
+  // 获取参数
+  nh.param("planning/vel", _Vel, 1.0);                // 规划中的最大速度
+  nh.param("planning/acc", _Acc, 1.0);                // 规划中的最大加速度
+  nh.param("planning/dev_order", _dev_order, 3);      // 规划中的导数阶数
+  nh.param("planning/min_order", _min_order, 3);      // 规划中的最小阶数
+  nh.param("vis/vis_traj_width", _vis_traj_width, 0.15); // 轨迹可视化宽度
+  nh.param("map/resolution", _resolution, 0.2);       // 栅格地图分辨率
+  nh.param("map/x_size", _x_size, 50.0);              // 地图x方向大小
+  nh.param("map/y_size", _y_size, 50.0);              // 地图y方向大小
+  nh.param("map/z_size", _z_size, 5.0);               // 地图z方向大小
+  nh.param("path/resolution", _path_resolution, 0.05); // 路径分辨率
+  nh.param("replanning/thresh_replan", replan_thresh, -1.0);    // 重规划触发距离阈值
+  nh.param("replanning/thresh_no_replan", no_replan_thresh, -1.0); // 不触发重规划的距离阈值
+
+  // 计算每个方向上的多项式系数个数
   _poly_num1D = 2 * _dev_order;
 
-  // 定时器，频率为100Hz
+  // 设置定时器，以100Hz的频率调用execCallback函数
   _exec_timer = nh.createTimer(ros::Duration(0.01), execCallback);
 
-  // 订阅rostopic，包括当前的状态，局部点云以及坐标点
-  _odom_sub = nh.subscribe("odom", 10, rcvOdomCallback);
-  _map_sub = nh.subscribe("local_pointcloud", 1, rcvPointCloudCallBack);
-  _pts_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallBack);
+  // 订阅ROS主题，包括当前的里程计状态、局部点云以及目标坐标
+  _odom_sub = nh.subscribe("odom", 10, rcvOdomCallback);             // 订阅里程计信息
+  _map_sub = nh.subscribe("local_pointcloud", 1, rcvPointCloudCallBack); // 订阅局部点云
+  _pts_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallBack);     // 订阅目标点
 
+  // 发布多项式轨迹、轨迹可视化和路径可视化
+  _traj_pub = nh.advertise<quadrotor_msgs::PolynomialTrajectory>("trajectory", 50); // 发布轨迹
+  _traj_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_trajectory", 1);    // 发布轨迹可视化
+  _path_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_path", 1);          // 发布路径可视化
 
-  // 发布多项式轨迹，轨迹点以及路径
-  _traj_pub =
-      nh.advertise<quadrotor_msgs::PolynomialTrajectory>("trajectory", 50);
-  _traj_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_trajectory", 1);
-  _path_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_path", 1);
+  // 设置障碍物地图的边界和参数
+  _map_lower << -_x_size / 2.0, -_y_size / 2.0, 0.0;    // 地图的下边界
+  _map_upper << +_x_size / 2.0, +_y_size / 2.0, _z_size; // 地图的上边界
+  _inv_resolution = 1.0 / _resolution;                  // 地图分辨率的倒数
+  _max_x_id = (int)(_x_size * _inv_resolution);         // x方向上的最大栅格索引
+  _max_y_id = (int)(_y_size * _inv_resolution);         // y方向上的最大栅格索引
+  _max_z_id = (int)(_z_size * _inv_resolution);         // z方向上的最大栅格索引
 
-  // 设置障碍物地图
-  _map_lower << -_x_size / 2.0, -_y_size / 2.0, 0.0;
-  _map_upper << +_x_size / 2.0, +_y_size / 2.0, _z_size;
-  _inv_resolution = 1.0 / _resolution;
-  _max_x_id = (int)(_x_size * _inv_resolution);
-  _max_y_id = (int)(_y_size * _inv_resolution);
-  _max_z_id = (int)(_z_size * _inv_resolution);
+  // 初始化A*路径搜索
+  _astar_path_finder = new AstarPathFinder(); 
+  _astar_path_finder->initGridMap(_resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
 
-  // A star 路径搜索
-  _astar_path_finder = new AstarPathFinder();
-  _astar_path_finder->initGridMap(_resolution, _map_lower, _map_upper,
-                                  _max_x_id, _max_y_id, _max_z_id);
-
-  // 运行回调函数
-  ros::Rate rate(100);
-  bool status = ros::ok();
+  // 循环运行ROS的回调函数
+  ros::Rate rate(100);           // 设置循环频率为100Hz
+  bool status = ros::ok();       // 检查ROS节点状态
   while (status) {
-    ros::spinOnce();
-    status = ros::ok();
-    rate.sleep();
+    ros::spinOnce();             // 处理所有已发布的回调
+    status = ros::ok();          // 检查ROS节点是否仍在运行
+    rate.sleep();                // 休眠以保持循环频率
   }
 
-  return 0;
+  return 0;                      // 程序正常结束
 }
