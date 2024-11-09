@@ -217,25 +217,28 @@ void rcvWaypointsCallBack(const nav_msgs::Path &wp) {
     changeState(REPLAN_TRAJ, "STATE");  // 如果当前的状态为正在执行轨迹，则改变状态为重新规划轨迹
 }
 
-// 获取当前的位置附近的局部点云，并以此为基础为Astar设置障碍物地图
+// 获取当前位置附近的局部点云，并将其用于A*算法的障碍物地图设置
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
 
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-  pcl::PointCloud<pcl::PointXYZ> cloud_vis;
-  sensor_msgs::PointCloud2 map_vis;
+  pcl::PointCloud<pcl::PointXYZ> cloud;      // 定义用于存储点云数据的PCL点云对象
+  pcl::PointCloud<pcl::PointXYZ> cloud_vis;  // 定义用于可视化的点云对象
+  sensor_msgs::PointCloud2 map_vis;          // 定义用于发布的ROS点云消息对象
 
+  // 将ROS消息格式的点云转换为PCL格式
   pcl::fromROSMsg(pointcloud_map, cloud);
 
+  // 如果点云为空，直接返回
   if ((int)cloud.points.size() == 0)
     return;
 
-  pcl::PointXYZ pt;
-  for (int idx = 0; idx < (int)cloud.points.size(); idx++) {
-    pt = cloud.points[idx];
-    // set obstalces into grid map for path planning
+  pcl::PointXYZ pt;  // 定义一个单个点的变量
+  for (int idx = 0; idx < (int)cloud.points.size(); idx++) {  // 遍历每个点
+    pt = cloud.points[idx];  // 获取当前点
+    // 将该点设置为路径规划中的障碍物
     _astar_path_finder->setObs(pt.x, pt.y, pt.z);
   }
 }
+
 
 
 // 轨迹生成
@@ -446,28 +449,51 @@ void trajPublish(MatrixXd polyCoeff, VectorXd time) {
   _traj_pub.publish(traj_msg);
 }
 
-VectorXd timeAllocation(MatrixXd Path) {
-  VectorXd time(Path.rows() - 1);
+// VectorXd timeAllocation(MatrixXd Path) {
+//   VectorXd time(Path.rows() - 1);
 
-// 加速段时间(同时考虑加速和减速段）
-  double t_scope = 2.0*_Vel/_Acc;
-  // 加速段距离(同时考虑加速和减速段）
-  double distance_acc = 1.0 /2.0 * _Acc * t_scope * t_scope * 2.0;
+// // 加速段时间(同时考虑加速和减速段）
+//   double t_scope = 2.0*_Vel/_Acc;
+//   // 加速段距离(同时考虑加速和减速段）
+//   double distance_acc = 1.0 /2.0 * _Acc * t_scope * t_scope * 2.0;
   
-  for (int k = 0; k< Path.rows()-1; ++k){
-      Vector3d delta = Path.row(k) - Path.row(k + 1);
-      double d = std::sqrt(delta.dot(delta));
+//   for (int k = 0; k< Path.rows()-1; ++k){
+//       Vector3d delta = Path.row(k) - Path.row(k + 1);
+//       double d = std::sqrt(delta.dot(delta));
 
-      if(d <= distance_acc){
-          time(k) = std::sqrt(d/_Acc);
-      }
-      else{
-          time(k) = t_scope + (d - distance_acc)/_Vel;
-      }
-  }
+//       if(d <= distance_acc){
+//           time(k) = std::sqrt(d/_Acc);
+//       }
+//       else{
+//           time(k) = t_scope + (d - distance_acc)/_Vel;
+//       }
+//   }
 
-  return time;
+//   return time;
+// }
+VectorXd timeAllocation(const MatrixXd Path) {
+    VectorXd time(Path.rows() - 1);  // 为每个路径段分配时间
+
+    // 计算加速和减速段的总时间以及加速段的距离
+    double t_scope = 2.0 * _Vel / _Acc;  // 加速时间
+    double distance_acc = 0.5 * _Acc * t_scope * t_scope;  // 加速段和减速段总距离
+
+    for (int k = 0; k < Path.rows() - 1; ++k) {
+        Vector3d delta = Path.row(k + 1) - Path.row(k);  // 计算路径段的位移向量
+        double d = delta.norm();  // 计算路径段长度
+
+        if (d <= distance_acc) {
+            // 如果路径段短于加速段距离，则仅使用加速段或减速段
+            time(k) = 2.0 * std::sqrt(d / _Acc);  // 使用双倍加速时间
+        } else {
+            // 对于较长路径段，包含完整的加速、匀速和减速过程
+            time(k) = t_scope + (d - distance_acc) / _Vel;  // 总时间 = 加速时间 + 匀速时间
+        }
+    }
+
+    return time;
 }
+
 
 void visTrajectory(MatrixXd polyCoeff, VectorXd time) {
   visualization_msgs::Marker _traj_vis;
@@ -587,7 +613,7 @@ int main(int argc, char **argv) {
   nh.param("map/x_size", _x_size, 50.0);              // 地图x方向大小
   nh.param("map/y_size", _y_size, 50.0);              // 地图y方向大小
   nh.param("map/z_size", _z_size, 5.0);               // 地图z方向大小
-  nh.param("path/resolution", _path_resolution, 0.05); // 路径分辨率
+  nh.param("path/resolution", _path_resolution, 0.01); // 路径分辨率
   nh.param("replanning/thresh_replan", replan_thresh, -1.0);    // 重规划触发距离阈值
   nh.param("replanning/thresh_no_replan", no_replan_thresh, -1.0); // 不触发重规划的距离阈值
 
