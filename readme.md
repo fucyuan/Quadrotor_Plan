@@ -37,8 +37,7 @@ sudo make install
 确保安装以下ROS包：
 
 ```bash
-sudo apt install ros-noetic-geometry-msgs ros-noetic-nav-msgs ros-noetic-pcl-ros ros-noetic-visualization-msgs ros-noetic-quadrotor-msgs
-```
+sudo apt install ros-noetic-geometry-msgs ros-noetic-nav-msgs ros-noetic-pcl-ros ros-noetic-visualization-msgs 
 
 ## 快速开始
 
