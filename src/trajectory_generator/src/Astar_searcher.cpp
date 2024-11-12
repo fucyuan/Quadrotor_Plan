@@ -120,13 +120,22 @@ Vector3d AstarPathFinder::gridIndex2coord(const Vector3i &index) {
 }
 
 Vector3i AstarPathFinder::coord2gridIndex(const Vector3d &pt) {
-  Vector3i idx;
+  Vector3i idx;  // 声明三维整数向量，用于存储索引
+
+  // 计算在 x 方向的索引
+  // int((pt(0) - gl_xl) * inv_resolution) 将 pt(0) 从实际坐标转换为栅格坐标
+  // 使用 max 函数确保索引不小于 0，使用 min 函数确保索引不超过 GLX_SIZE - 1
   idx << min(max(int((pt(0) - gl_xl) * inv_resolution), 0), GLX_SIZE - 1),
+
+      // 计算在 y 方向的索引，逻辑同上
       min(max(int((pt(1) - gl_yl) * inv_resolution), 0), GLY_SIZE - 1),
+
+      // 计算在 z 方向的索引，逻辑同上
       min(max(int((pt(2) - gl_zl) * inv_resolution), 0), GLZ_SIZE - 1);
 
-  return idx;
+  return idx;  // 返回计算后的栅格索引
 }
+
 
 Eigen::Vector3d AstarPathFinder::coordRounding(const Eigen::Vector3d &coord) {
   return gridIndex2coord(coord2gridIndex(coord));
@@ -154,40 +163,107 @@ inline bool AstarPathFinder::isFree(const int &idx_x, const int &idx_y,
           (data[idx_x * GLYZ_SIZE + idx_y * GLZ_SIZE + idx_z] < 1));
 }
 
+// inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr,
+//                                           vector<GridNodePtr> &neighborPtrSets,
+//                                           vector<double> &edgeCostSets) {
+//   // 清空邻居节点指针集合和边代价集合
+//   neighborPtrSets.clear();
+//   edgeCostSets.clear();
+//   Vector3i neighborIdx; // 定义邻居节点的索引变量
+
+//   // 遍历当前节点的周围所有可能的邻居节点 (dx, dy, dz 范围从 -1 到 1)
+//   for (int dx = -1; dx < 2; dx++) {
+//     for (int dy = -1; dy < 2; dy++) {
+//       for (int dz = -1; dz < 2; dz++) {
+
+//         // 如果 dx、dy、dz 都为 0，表示当前节点本身，跳过
+//         if (dx == 0 && dy == 0 && dz == 0)
+//           continue;
+
+//         // 计算邻居节点的索引
+//         neighborIdx(0) = (currentPtr->index)(0) + dx;
+//         neighborIdx(1) = (currentPtr->index)(1) + dy;
+//         neighborIdx(2) = (currentPtr->index)(2) + dz;
+
+//         // 判断邻居节点是否超出地图范围，如果超出则跳过
+//         if (neighborIdx(0) < 0 || neighborIdx(0) >= GLX_SIZE ||
+//             neighborIdx(1) < 0 || neighborIdx(1) >= GLY_SIZE ||
+//             neighborIdx(2) < 0 || neighborIdx(2) >= GLZ_SIZE) {
+//           continue;
+//         }
+
+//         // 判断邻居节点是否被占据，如果被占据则跳过
+//         if(isOccupied(neighborIdx(0), neighborIdx(1), neighborIdx(2))){
+//             continue;
+//         }
+
+//         // 如果邻居节点有效且未被占据，加入邻居节点指针集合和边代价集合
+//         neighborPtrSets.push_back(
+//             GridNodeMap[neighborIdx(0)][neighborIdx(1)][neighborIdx(2)]);
+        
+//         // 计算当前节点到邻居节点的欧几里得距离作为边的代价，并加入边代价集合
+//         edgeCostSets.push_back(sqrt(dx * dx + dy * dy + dz * dz));
+//       }
+//     }
+//   }
+// }
 inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr,
                                           vector<GridNodePtr> &neighborPtrSets,
                                           vector<double> &edgeCostSets) {
+  // 清空并提前分配空间，减少动态分配的开销
   neighborPtrSets.clear();
   edgeCostSets.clear();
+  neighborPtrSets.reserve(26);
+  edgeCostSets.reserve(26);
+
   Vector3i neighborIdx;
-  for (int dx = -1; dx < 2; dx++) {
-    for (int dy = -1; dy < 2; dy++) {
-      for (int dz = -1; dz < 2; dz++) {
+  static const int offset[26][3] = {
+      {-1, -1, -1}, {-1, -1, 0}, {-1, -1, 1},
+      {-1, 0, -1},  {-1, 0, 0},  {-1, 0, 1},
+      {-1, 1, -1},  {-1, 1, 0},  {-1, 1, 1},
+      {0, -1, -1},  {0, -1, 0},  {0, -1, 1},
+      {0, 0, -1},   {0, 0, 1},
+      {0, 1, -1},   {0, 1, 0},   {0, 1, 1},
+      {1, -1, -1},  {1, -1, 0},  {1, -1, 1},
+      {1, 0, -1},   {1, 0, 0},   {1, 0, 1},
+      {1, 1, -1},   {1, 1, 0},   {1, 1, 1}
+  };
+  static const double edgeCost[26] = {
+      sqrt(3), sqrt(2), sqrt(3),
+      sqrt(2), 1.0,     sqrt(2),
+      sqrt(3), sqrt(2), sqrt(3),
+      sqrt(2), 1.0,     sqrt(2),
+      1.0,               sqrt(2),
+      sqrt(2), 1.0,     sqrt(2),
+      sqrt(3), sqrt(2), sqrt(3),
+      sqrt(2), 1.0,     sqrt(2),
+      sqrt(3), sqrt(2), sqrt(3)
+  };
 
-        if (dx == 0 && dy == 0 && dz == 0)
-          continue;
+  for (int i = 0; i < 26; ++i) {
+    // 计算邻居节点索引
+    neighborIdx(0) = (currentPtr->index)(0) + offset[i][0];
+    neighborIdx(1) = (currentPtr->index)(1) + offset[i][1];
+    neighborIdx(2) = (currentPtr->index)(2) + offset[i][2];
 
-        neighborIdx(0) = (currentPtr->index)(0) + dx;
-        neighborIdx(1) = (currentPtr->index)(1) + dy;
-        neighborIdx(2) = (currentPtr->index)(2) + dz;
-
-        if (neighborIdx(0) < 0 || neighborIdx(0) >= GLX_SIZE ||
-            neighborIdx(1) < 0 || neighborIdx(1) >= GLY_SIZE ||
-            neighborIdx(2) < 0 || neighborIdx(2) >= GLZ_SIZE) {
-          continue;
-        }
-
-        if(isOccupied(neighborIdx(0),neighborIdx(1),neighborIdx(2))){
-            continue;
-        }
-
-        neighborPtrSets.push_back(
-            GridNodeMap[neighborIdx(0)][neighborIdx(1)][neighborIdx(2)]);
-        edgeCostSets.push_back(sqrt(dx * dx + dy * dy + dz * dz));
-      }
+    // 检查邻居是否在地图范围内
+    if (neighborIdx(0) < 0 || neighborIdx(0) >= GLX_SIZE ||
+        neighborIdx(1) < 0 || neighborIdx(1) >= GLY_SIZE ||
+        neighborIdx(2) < 0 || neighborIdx(2) >= GLZ_SIZE) {
+      continue;
     }
+
+    // 检查邻居是否被占据
+    if (isOccupied(neighborIdx(0), neighborIdx(1), neighborIdx(2))) {
+      continue;
+    }
+
+    // 添加有效的邻居节点指针和对应的边代价
+    neighborPtrSets.push_back(GridNodeMap[neighborIdx(0)][neighborIdx(1)][neighborIdx(2)]);
+    edgeCostSets.push_back(edgeCost[i]);
   }
 }
+
 
 double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
   // using digonal distance and one type of tie_breaker.
@@ -227,7 +303,7 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
   // GridNodePtr startPtr = new GridNode(start_idx, start_pt);
   // GridNodePtr endPtr = new GridNode(end_idx, end_pt);
 
-  // 初始化起点和终点节点(因为前面已经初始化过，所以不需要再New)
+  // 初始化起点和终点节点
   GridNodePtr startPtr = GridNodeMap[start_idx(0)][start_idx(1)][start_idx(2)];
   GridNodePtr endPtr   = GridNodeMap[end_idx(0)][end_idx(1)][end_idx(2)];
 
@@ -253,9 +329,78 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
   vector<GridNodePtr> neighborPtrSets;
   vector<double> edgeCostSets;
 
-  while (!openSet.empty()) {
+  // while (!openSet.empty()) {
 
-    // 弹出最大f的节点
+  //   // 弹出最大f的节点
+  //   currentPtr = openSet.begin()->second;
+  //   currentPtr->id = -1; // 标记为闭集
+
+  //   // 从开集中移除
+  //   openSet.erase(openSet.begin());
+  //   Eigen::Vector3i current_idx = currentPtr->index;
+
+
+  //   // 获取拓展集合
+  //   AstarGetSucc(currentPtr, neighborPtrSets, edgeCostSets);     
+
+
+  //   // 遍历拓展集合        
+  //   for(int i = 0; i < (int)neighborPtrSets.size(); i++){
+        
+
+  //       neighborPtr = neighborPtrSets[i];
+  //       double gh = currentPtr->gScore + edgeCostSets[i];
+  //       double fh = gh + getHeu(neighborPtr,endPtr);
+
+  //       // 如果为自由节点
+  //       if(neighborPtr -> id == 0){ 
+            
+  //           // 计算相应的g和f，并加入opensets
+  //           neighborPtr->gScore = gh;
+  //           neighborPtr->fScore = fh;
+  //           neighborPtr->cameFrom = currentPtr;
+
+  //           neighborPtr->nodeMapIt = openSet.insert(make_pair(neighborPtr->fScore,neighborPtr));// 此处注意一定要先计算和赋值完f再加入
+
+  //           // 判断是否为目标节点 改到此处为了提高代码效率 不用将所有节点加入后等弹出时发现目标再退出
+  //           if(neighborPtr->index == goalIdx){
+  //               ros::Time time_2 = ros::Time::now();
+  //               terminatePtr = neighborPtr;
+  //               ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m", (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution );    
+  //               return;
+  //           }
+  //           else{
+  //               // 标记为open list
+  //               neighborPtr->id = 1;
+  //               continue;
+
+  //           }
+  //       }
+  //       else if(neighborPtr ->id == 1){ 
+  //           // 如果已经在openlist里面
+  //           if(neighborPtr->gScore > gh)
+  //           {
+  //               // 更新对应的f值
+
+  //               neighborPtr->gScore = gh;
+  //               neighborPtr->fScore = fh;
+  //               neighborPtr->cameFrom = currentPtr;
+  //               openSet.erase(neighborPtr->nodeMapIt);
+  //               neighborPtr->nodeMapIt = openSet.insert(make_pair(neighborPtr->fScore,neighborPtr));
+
+
+  //           }
+  //       }
+  //       else{
+  //           // 如果是closelist里面的则不做处理
+  //           continue;
+  //       }
+  //   }      
+
+  // }
+while (!openSet.empty()) {
+
+    // 从 openSet 中取出最小 fScore 的节点
     currentPtr = openSet.begin()->second;
     currentPtr->id = -1; // 标记为闭集
 
@@ -263,65 +408,51 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
     openSet.erase(openSet.begin());
     Eigen::Vector3i current_idx = currentPtr->index;
 
-
     // 获取拓展集合
+    neighborPtrSets.clear();
+    edgeCostSets.clear();
     AstarGetSucc(currentPtr, neighborPtrSets, edgeCostSets);     
 
-
     // 遍历拓展集合        
-    for(int i = 0; i < (int)neighborPtrSets.size(); i++){
-        
+    for (int i = 0; i < (int)neighborPtrSets.size(); i++) {
 
         neighborPtr = neighborPtrSets[i];
         double gh = currentPtr->gScore + edgeCostSets[i];
-        double fh = gh + getHeu(neighborPtr,endPtr);
 
-        // 如果为自由节点
-        if(neighborPtr -> id == 0){ 
-            
-            // 计算相应的g和f，并加入opensets
+        // 如果启发式尚未计算，计算并缓存
+        if (neighborPtr->heuristic == -1) {
+            neighborPtr->heuristic = getHeu(neighborPtr, endPtr);
+        }
+        double fh = gh + neighborPtr->heuristic;
+
+        // 如果为自由节点，或有更优的路径更新
+        if (neighborPtr->id == 0 || (neighborPtr->id == 1 && neighborPtr->gScore > gh)) {
+
             neighborPtr->gScore = gh;
             neighborPtr->fScore = fh;
             neighborPtr->cameFrom = currentPtr;
 
-            neighborPtr->nodeMapIt = openSet.insert(make_pair(neighborPtr->fScore,neighborPtr));// 此处注意一定要先计算和赋值完f再加入
+            // 如果已在 openSet 中，先移除旧条目
+            if (neighborPtr->id == 1) {
+                openSet.erase(neighborPtr->nodeMapIt);
+            }
 
-            // 判断是否为目标节点 改到此处为了提高代码效率 不用将所有节点加入后等弹出时发现目标再退出
-            if(neighborPtr->index == goalIdx){
-                ros::Time time_2 = ros::Time::now();
+            // 插入新的 fScore，更新 nodeMapIt
+            neighborPtr->nodeMapIt = openSet.insert(make_pair(neighborPtr->fScore, neighborPtr));
+
+            // 如果邻居节点是目标节点，提前退出
+            if (neighborPtr->index == goalIdx) {
                 terminatePtr = neighborPtr;
-                ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m", (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution );    
+                ROS_WARN("[A*]{success} Time in A* is %f ms, path cost is %f m",
+                         (ros::Time::now() - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
                 return;
             }
-            else{
-                // 标记为open list
-                neighborPtr->id = 1;
-                continue;
 
-            }
+            // 将节点标记为 open list
+            neighborPtr->id = 1;
         }
-        else if(neighborPtr ->id == 1){ 
-            // 如果已经在openlist里面
-            if(neighborPtr->gScore > gh)
-            {
-                // 更新对应的f值
-
-                neighborPtr->gScore = gh;
-                neighborPtr->fScore = fh;
-                neighborPtr->cameFrom = currentPtr;
-                openSet.erase(neighborPtr->nodeMapIt);
-                neighborPtr->nodeMapIt = openSet.insert(make_pair(neighborPtr->fScore,neighborPtr));
-
-
-            }
-        }
-        else{
-            // 如果是closelist里面的则不做处理
-            continue;
-        }
-    }      
-
-  }
+    }
+}
 
   // if search fails
   ros::Time time_2 = ros::Time::now();
