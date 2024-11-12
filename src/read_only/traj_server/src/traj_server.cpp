@@ -372,7 +372,7 @@ public:
                         _cmd.yaw_dot /= fabs(_cmd.yaw_dot);
                         _cmd.yaw_dot *= pi/2;
                     }
-
+                    _cmd.yaw_dot=0;
                     //ROS_WARN("%.8f %.8f %.8f %.8f",_cmd.velocity.x,_cmd.velocity.y,_cmd.yaw,t);
 
                     break;
