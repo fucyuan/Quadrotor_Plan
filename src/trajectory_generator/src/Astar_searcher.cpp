@@ -163,106 +163,106 @@ inline bool AstarPathFinder::isFree(const int &idx_x, const int &idx_y,
           (data[idx_x * GLYZ_SIZE + idx_y * GLZ_SIZE + idx_z] < 1));
 }
 
-// inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr,
-//                                           vector<GridNodePtr> &neighborPtrSets,
-//                                           vector<double> &edgeCostSets) {
-//   // 清空邻居节点指针集合和边代价集合
-//   neighborPtrSets.clear();
-//   edgeCostSets.clear();
-//   Vector3i neighborIdx; // 定义邻居节点的索引变量
-
-//   // 遍历当前节点的周围所有可能的邻居节点 (dx, dy, dz 范围从 -1 到 1)
-//   for (int dx = -1; dx < 2; dx++) {
-//     for (int dy = -1; dy < 2; dy++) {
-//       for (int dz = -1; dz < 2; dz++) {
-
-//         // 如果 dx、dy、dz 都为 0，表示当前节点本身，跳过
-//         if (dx == 0 && dy == 0 && dz == 0)
-//           continue;
-
-//         // 计算邻居节点的索引
-//         neighborIdx(0) = (currentPtr->index)(0) + dx;
-//         neighborIdx(1) = (currentPtr->index)(1) + dy;
-//         neighborIdx(2) = (currentPtr->index)(2) + dz;
-
-//         // 判断邻居节点是否超出地图范围，如果超出则跳过
-//         if (neighborIdx(0) < 0 || neighborIdx(0) >= GLX_SIZE ||
-//             neighborIdx(1) < 0 || neighborIdx(1) >= GLY_SIZE ||
-//             neighborIdx(2) < 0 || neighborIdx(2) >= GLZ_SIZE) {
-//           continue;
-//         }
-
-//         // 判断邻居节点是否被占据，如果被占据则跳过
-//         if(isOccupied(neighborIdx(0), neighborIdx(1), neighborIdx(2))){
-//             continue;
-//         }
-
-//         // 如果邻居节点有效且未被占据，加入邻居节点指针集合和边代价集合
-//         neighborPtrSets.push_back(
-//             GridNodeMap[neighborIdx(0)][neighborIdx(1)][neighborIdx(2)]);
-        
-//         // 计算当前节点到邻居节点的欧几里得距离作为边的代价，并加入边代价集合
-//         edgeCostSets.push_back(sqrt(dx * dx + dy * dy + dz * dz));
-//       }
-//     }
-//   }
-// }
 inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr,
                                           vector<GridNodePtr> &neighborPtrSets,
                                           vector<double> &edgeCostSets) {
-  // 清空并提前分配空间，减少动态分配的开销
+  // 清空邻居节点指针集合和边代价集合
   neighborPtrSets.clear();
   edgeCostSets.clear();
-  neighborPtrSets.reserve(26);
-  edgeCostSets.reserve(26);
+  Vector3i neighborIdx; // 定义邻居节点的索引变量
 
-  Vector3i neighborIdx;
-  static const int offset[26][3] = {
-      {-1, -1, -1}, {-1, -1, 0}, {-1, -1, 1},
-      {-1, 0, -1},  {-1, 0, 0},  {-1, 0, 1},
-      {-1, 1, -1},  {-1, 1, 0},  {-1, 1, 1},
-      {0, -1, -1},  {0, -1, 0},  {0, -1, 1},
-      {0, 0, -1},   {0, 0, 1},
-      {0, 1, -1},   {0, 1, 0},   {0, 1, 1},
-      {1, -1, -1},  {1, -1, 0},  {1, -1, 1},
-      {1, 0, -1},   {1, 0, 0},   {1, 0, 1},
-      {1, 1, -1},   {1, 1, 0},   {1, 1, 1}
-  };
-  static const double edgeCost[26] = {
-      sqrt(3), sqrt(2), sqrt(3),
-      sqrt(2), 1.0,     sqrt(2),
-      sqrt(3), sqrt(2), sqrt(3),
-      sqrt(2), 1.0,     sqrt(2),
-      1.0,               sqrt(2),
-      sqrt(2), 1.0,     sqrt(2),
-      sqrt(3), sqrt(2), sqrt(3),
-      sqrt(2), 1.0,     sqrt(2),
-      sqrt(3), sqrt(2), sqrt(3)
-  };
+  // 遍历当前节点的周围所有可能的邻居节点 (dx, dy, dz 范围从 -1 到 1)
+  for (int dx = -1; dx < 2; dx++) {
+    for (int dy = -1; dy < 2; dy++) {
+      for (int dz = -1; dz < 2; dz++) {
 
-  for (int i = 0; i < 26; ++i) {
-    // 计算邻居节点索引
-    neighborIdx(0) = (currentPtr->index)(0) + offset[i][0];
-    neighborIdx(1) = (currentPtr->index)(1) + offset[i][1];
-    neighborIdx(2) = (currentPtr->index)(2) + offset[i][2];
+        // 如果 dx、dy、dz 都为 0，表示当前节点本身，跳过
+        if (dx == 0 && dy == 0 && dz == 0)
+          continue;
 
-    // 检查邻居是否在地图范围内
-    if (neighborIdx(0) < 0 || neighborIdx(0) >= GLX_SIZE ||
-        neighborIdx(1) < 0 || neighborIdx(1) >= GLY_SIZE ||
-        neighborIdx(2) < 0 || neighborIdx(2) >= GLZ_SIZE) {
-      continue;
+        // 计算邻居节点的索引
+        neighborIdx(0) = (currentPtr->index)(0) + dx;
+        neighborIdx(1) = (currentPtr->index)(1) + dy;
+        neighborIdx(2) = (currentPtr->index)(2) + dz;
+
+        // 判断邻居节点是否超出地图范围，如果超出则跳过
+        if (neighborIdx(0) < 0 || neighborIdx(0) >= GLX_SIZE ||
+            neighborIdx(1) < 0 || neighborIdx(1) >= GLY_SIZE ||
+            neighborIdx(2) < 0 || neighborIdx(2) >= GLZ_SIZE) {
+          continue;
+        }
+
+        // 判断邻居节点是否被占据，如果被占据则跳过
+        if(isOccupied(neighborIdx(0), neighborIdx(1), neighborIdx(2))){
+            continue;
+        }
+
+        // 如果邻居节点有效且未被占据，加入邻居节点指针集合和边代价集合
+        neighborPtrSets.push_back(
+            GridNodeMap[neighborIdx(0)][neighborIdx(1)][neighborIdx(2)]);
+        
+        // 计算当前节点到邻居节点的欧几里得距离作为边的代价，并加入边代价集合
+        edgeCostSets.push_back(sqrt(dx * dx + dy * dy + dz * dz));
+      }
     }
-
-    // 检查邻居是否被占据
-    if (isOccupied(neighborIdx(0), neighborIdx(1), neighborIdx(2))) {
-      continue;
-    }
-
-    // 添加有效的邻居节点指针和对应的边代价
-    neighborPtrSets.push_back(GridNodeMap[neighborIdx(0)][neighborIdx(1)][neighborIdx(2)]);
-    edgeCostSets.push_back(edgeCost[i]);
   }
 }
+// inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr,
+//                                           vector<GridNodePtr> &neighborPtrSets,
+//                                           vector<double> &edgeCostSets) {
+//   // 清空并提前分配空间，减少动态分配的开销
+//   neighborPtrSets.clear();
+//   edgeCostSets.clear();
+//   neighborPtrSets.reserve(26);
+//   edgeCostSets.reserve(26);
+
+//   Vector3i neighborIdx;
+//   static const int offset[26][3] = {
+//       {-1, -1, -1}, {-1, -1, 0}, {-1, -1, 1},
+//       {-1, 0, -1},  {-1, 0, 0},  {-1, 0, 1},
+//       {-1, 1, -1},  {-1, 1, 0},  {-1, 1, 1},
+//       {0, -1, -1},  {0, -1, 0},  {0, -1, 1},
+//       {0, 0, -1},   {0, 0, 1},
+//       {0, 1, -1},   {0, 1, 0},   {0, 1, 1},
+//       {1, -1, -1},  {1, -1, 0},  {1, -1, 1},
+//       {1, 0, -1},   {1, 0, 0},   {1, 0, 1},
+//       {1, 1, -1},   {1, 1, 0},   {1, 1, 1}
+//   };
+//   static const double edgeCost[26] = {
+//       sqrt(3), sqrt(2), sqrt(3),
+//       sqrt(2), 1.0,     sqrt(2),
+//       sqrt(3), sqrt(2), sqrt(3),
+//       sqrt(2), 1.0,     sqrt(2),
+//       1.0,               sqrt(2),
+//       sqrt(2), 1.0,     sqrt(2),
+//       sqrt(3), sqrt(2), sqrt(3),
+//       sqrt(2), 1.0,     sqrt(2),
+//       sqrt(3), sqrt(2), sqrt(3)
+//   };
+
+//   for (int i = 0; i < 26; ++i) {
+//     // 计算邻居节点索引
+//     neighborIdx(0) = (currentPtr->index)(0) + offset[i][0];
+//     neighborIdx(1) = (currentPtr->index)(1) + offset[i][1];
+//     neighborIdx(2) = (currentPtr->index)(2) + offset[i][2];
+
+//     // 检查邻居是否在地图范围内
+//     if (neighborIdx(0) < 0 || neighborIdx(0) >= GLX_SIZE ||
+//         neighborIdx(1) < 0 || neighborIdx(1) >= GLY_SIZE ||
+//         neighborIdx(2) < 0 || neighborIdx(2) >= GLZ_SIZE) {
+//       continue;
+//     }
+
+//     // 检查邻居是否被占据
+//     if (isOccupied(neighborIdx(0), neighborIdx(1), neighborIdx(2))) {
+//       continue;
+//     }
+
+//     // 添加有效的邻居节点指针和对应的边代价
+//     neighborPtrSets.push_back(GridNodeMap[neighborIdx(0)][neighborIdx(1)][neighborIdx(2)]);
+//     edgeCostSets.push_back(edgeCost[i]);
+//   }
+// }
 
 
 double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
